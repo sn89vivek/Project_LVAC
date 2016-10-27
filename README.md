@@ -2,6 +2,7 @@
 LVAC Inverter project
 
 Firmwares
+
 1. LVAC Diagnostics Node
 Diagnostic Module for Individual LVAC modules
 Platform: CC1350
