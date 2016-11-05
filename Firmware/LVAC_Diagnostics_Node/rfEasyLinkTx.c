@@ -223,18 +223,19 @@ static void rfEasyLinkTxFnx(UArg arg0, UArg arg1)
 			}
 		}
 
-		Display_print0(hDisplaySerial, 0, 0, "Conversion results:");
+		/*Display_print0(hDisplaySerial, 0, 0, "Conversion results:");
 		for(i = 0; i !=8; i++)
 		{
 			System_sprintf(uartTxBuffer,"%u", sampleBufferOne[i]);
 			Display_print0(hDisplaySerial, 0, 0, uartTxBuffer);
-		}
+		}*/
 
         EasyLink_TxPacket txPacket =  { {0}, 0, 0, {0} };
 
         /* Create packet with incrementing sequence number and random payload */
-        txPacket.payload[0] = (uint8_t)(seqNumber >> 8);
-        txPacket.payload[1] = (uint8_t)(seqNumber++);
+//        txPacket.payload[0] = (uint8_t)(seqNumber >> 8);
+//        txPacket.payload[1] = (uint8_t)(seqNumber++);
+        txPacket.payload[0] = 0x22;
         uint8_t *result_ptr = (uint8_t *)sampleBufferOne;
 //        for (i = 2; i < RFEASYLINKTXPAYLOAD_LENGTH; i++)
 //        {
@@ -245,7 +246,8 @@ static void rfEasyLinkTxFnx(UArg arg0, UArg arg1)
           txPacket.payload[i] = *result_ptr++;
         }
 
-        txPacket.len = RFEASYLINKTXPAYLOAD_LENGTH;
+//        txPacket.len = RFEASYLINKTXPAYLOAD_LENGTH;
+        txPacket.len = 1;
         txPacket.dstAddr[0] = 0xaa;
 
         /* Add a Tx delay for > 500ms, so that the abort kicks in and brakes the burst */

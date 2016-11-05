@@ -85,6 +85,7 @@ static Task_Params rxTaskParams;
 Task_Struct rxTask;    /* not static so you can see in ROV */
 static uint8_t rxTaskStack[RFEASYLINKEX_TASK_STACK_SIZE];
 static Display_Handle hDisplaySerial;
+static uint8_t node_indentifier;
 
 /* The RX Output struct contains statistics about the RX operation of the radio */
 PIN_Handle pinHandle;
@@ -104,10 +105,13 @@ void rxDoneCb(EasyLink_RxPacket * rxPacket, EasyLink_Status status)
     {
         /* Toggle LED2 to indicate RX */
         PIN_setOutputValue(pinHandle, Board_LED2,!PIN_getOutputValue(Board_LED2));
-		for(i = 0; i !=8; i++)
+/*		for(i = 0; i !=8; i++)
 		{
 			result_buf[i] = (*(uint16_t *)(rxPacket->payload+2*(i+1)));
-		}
+		}*/
+
+        // received databyte into global variable
+        node_indentifier = rxPacket->payload[0];
 
     }
     else if(status == EasyLink_Status_Aborted)
@@ -212,11 +216,13 @@ static void rfEasyLinkRxFnx(UArg arg0, UArg arg1)
         /* print results */
         Display_print0(hDisplaySerial, 0, 0, "Conversion results:");
         uint8_t i;
-		for(i = 0; i !=8; i++)
+		/*for(i = 0; i !=8; i++)
 		{
 			System_sprintf(uartTxBuffer,"%u", result_buf[i]);
 			Display_print0(hDisplaySerial, 0, 0, uartTxBuffer);
-		}
+		}*/
+        System_sprintf(uartTxBuffer,"%d",(int16_t)node_indentifier);
+        Display_print0(hDisplaySerial, 0, 0, uartTxBuffer);
     }
 }
 
