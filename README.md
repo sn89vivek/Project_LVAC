@@ -17,3 +17,10 @@ Firmwares
  * Controller for LVAC modules
  * Platform: Piccolo TMS320F28069
  * IDE: Code Composer Studio Version: 6.1.2.00015
+ 
+### To run the Diagnostics projects ###
+ - Install TI-RTOS CC13xx/CC26xx from CCS App Center from Code Composer Studio IDE. 
+ - Help -> CCS App Center. Search for TI-RTOS CC13xx/CC26xx. Download and Install.
+ 
+### To run the LVAC Control project ###
+ - Install controlSUITE from CCS App Center

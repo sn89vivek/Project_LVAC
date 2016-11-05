@@ -1,0 +1,7 @@
+
+1. Why does the latency not change when sending a packet with a reduced length? 
+   (OR) What does a frame transmitted look like?
+2. How to transmit packets globally?
+3. What are the mechanisms for error correction?
+4. How to establish full duplex communication?
+5. How are collisions handled whem multiple nodes transmit at the same time?
