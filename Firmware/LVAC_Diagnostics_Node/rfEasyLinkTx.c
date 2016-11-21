@@ -60,16 +60,22 @@
 
 /* Undefine to not use async mode */
 #define RFEASYLINKTX_ASYNC
+#define RFEASYLINKRX_ASYNC
+#define RFEASYLINKRX_ADDR_FILTER
 
 #define RFEASYLINKTX_TASK_STACK_SIZE    1024
 #define RFEASYLINKTX_TASK_PRIORITY      2
 
+#define RFEASYLINKEX_TASK_STACK_SIZE    1024
+#define RFEASYLINKEX_TASK_PRIORITY      3
+
 #define RFEASYLINKTX_BURST_SIZE         10
 #define RFEASYLINKTXPAYLOAD_LENGTH      30
 
-Task_Struct txTask;    /* not static so you can see in ROV */
-static Task_Params txTaskParams;
+Task_Struct txTask,rxTask;    /* not static so you can see in ROV */
+static Task_Params txTaskParams, rxTaskParams;
 static uint8_t txTaskStack[RFEASYLINKTX_TASK_STACK_SIZE];
+static uint8_t rxTaskStack[RFEASYLINKEX_TASK_STACK_SIZE];
 
 /* Pin driver handle */
 static PIN_Handle pinHandle;
@@ -80,6 +86,7 @@ static Display_Handle hDisplaySerial;
 
 /* ADC result buffer */
 uint16_t sampleBufferOne[CC1350_LAUNCHXL_ADCCOUNT];
+uint8_t node_indentifier;
 
 /*
  * Application LED pin configuration table:
@@ -91,11 +98,47 @@ PIN_Config pinTable[] = {
     PIN_TERMINATE
 };
 
-static uint16_t seqNumber;
+//static uint16_t seqNumber;
+#ifdef RFEASYLINKRX_ASYNC
+static Semaphore_Handle rxDoneSem;
+#endif
 
 #ifdef RFEASYLINKTX_ASYNC
 static Semaphore_Handle txDoneSem;
 #endif //RFEASYLINKTX_ASYNC
+
+#ifdef RFEASYLINKRX_ASYNC
+void rxDoneCb(EasyLink_RxPacket * rxPacket, EasyLink_Status status)
+{
+//	uint8_t i;
+    if (status == EasyLink_Status_Success)
+    {
+        /* Toggle LED2 to indicate RX */
+        PIN_setOutputValue(pinHandle, Board_LED2,!PIN_getOutputValue(Board_LED2));
+/*		for(i = 0; i !=8; i++)
+		{
+			result_buf[i] = (*(uint16_t *)(rxPacket->payload+2*(i+1)));
+		}*/
+
+        // received databyte into global variable
+        node_indentifier = rxPacket->payload[0];
+
+    }
+    else if(status == EasyLink_Status_Aborted)
+    {
+        /* Toggle LED1 to indicate command aborted */
+        PIN_setOutputValue(pinHandle, Board_LED1,!PIN_getOutputValue(Board_LED1));
+    }
+    else
+    {
+        /* Toggle LED1 and LED2 to indicate error */
+        PIN_setOutputValue(pinHandle, Board_LED1,!PIN_getOutputValue(Board_LED1));
+        PIN_setOutputValue(pinHandle, Board_LED2,!PIN_getOutputValue(Board_LED2));
+    }
+
+    Semaphore_post(rxDoneSem);
+}
+#endif
 
 #ifdef RFEASYLINKTX_ASYNC
 void txDoneCb(EasyLink_Status status)
@@ -126,9 +169,9 @@ static void rfEasyLinkTxFnx(UArg arg0, UArg arg1)
     uint8_t txBurstSize = 0;
 
     /* Initialize display and try to open both UART and LCD types of display. */
-    Display_Params dparams;
-    Display_Params_init(&dparams);
-    dparams.lineClearMode = DISPLAY_CLEAR_BOTH;
+//    Display_Params dparams;
+//    Display_Params_init(&dparams);
+//    dparams.lineClearMode = DISPLAY_CLEAR_BOTH;
 
     ADCBuf_Handle adcBuf;
 
@@ -137,7 +180,7 @@ static void rfEasyLinkTxFnx(UArg arg0, UArg arg1)
     ADCBuf_Conversion conversionConfig;
 
     /* Uart Tx Buffer */
-    char uartTxBuffer[20];
+//    char uartTxBuffer[20];
 
     /* Open both an available LCD display and an UART display.
      * Whether the open call is successful depends on what is present in the
@@ -148,13 +191,13 @@ static void rfEasyLinkTxFnx(UArg arg0, UArg arg1)
      * excluded, and UART is preferred by default. To display on the Watch
      * DevPack, add the precompiler define BOARD_DISPLAY_EXCLUDE_UART.
      */
-    hDisplaySerial = Display_open(Display_Type_UART, &dparams);
-
-    /* Check if the selected Display type was found and successfully opened */
-    if (!hDisplaySerial)
-    {
-    	System_abort("Error initializing UART\n");
-    }
+//    hDisplaySerial = Display_open(Display_Type_UART, &dparams);
+//
+//    /* Check if the selected Display type was found and successfully opened */
+//    if (!hDisplaySerial)
+//    {
+//    	System_abort("Error initializing UART\n");
+//    }
 	Display_print0(hDisplaySerial, 0, 0, "TX Module");
 
 #ifdef RFEASYLINKTX_ASYNC
@@ -170,11 +213,11 @@ static void rfEasyLinkTxFnx(UArg arg0, UArg arg1)
     txDoneSem = Semaphore_create(0, &params, &eb);
 #endif //TX_ASYNC
 
-    EasyLink_init(EasyLink_Phy_50kbps2gfsk);
-    /* Set Freq to 868MHz */
-    EasyLink_setFrequency(868000000);
-    /* Set output power to 12dBm */
-    EasyLink_setRfPwr(12);
+//    EasyLink_init(EasyLink_Phy_50kbps2gfsk);
+//    /* Set Freq to 868MHz */
+//    EasyLink_setFrequency(868000000);
+//    /* Set output power to 12dBm */
+//    EasyLink_setRfPwr(12);
 
     /* Set up an ADCBuf peripheral in ADCBuf_RECURRENCE_MODE_CONTINUOUS */
     ADCBuf_Params_init(&adcBufParams);
@@ -223,6 +266,7 @@ static void rfEasyLinkTxFnx(UArg arg0, UArg arg1)
 			}
 		}
 
+//		Display_print0(hDisplaySerial, 0, 0, "TX packet");
 		/*Display_print0(hDisplaySerial, 0, 0, "Conversion results:");
 		for(i = 0; i !=8; i++)
 		{
@@ -268,7 +312,8 @@ static void rfEasyLinkTxFnx(UArg arg0, UArg arg1)
 #ifdef RFEASYLINKTX_ASYNC
         EasyLink_transmitAsync(&txPacket, txDoneCb);
         /* Wait 300ms for Tx to complete */
-        if(Semaphore_pend(txDoneSem, (3000000 / Clock_tickPeriod)) == FALSE)
+//        if(Semaphore_pend(txDoneSem, (3000000 / Clock_tickPeriod)) == FALSE)
+        if(Semaphore_pend(txDoneSem, (BIOS_WAIT_FOREVER)) == FALSE)
         {
             /* TX timed out, abort */
             if(EasyLink_abort() == EasyLink_Status_Success)
@@ -298,6 +343,103 @@ static void rfEasyLinkTxFnx(UArg arg0, UArg arg1)
     }
 }
 
+static void rfEasyLinkRxFnx(UArg arg0, UArg arg1)
+{
+#ifndef RFEASYLINKRX_ASYNC
+    EasyLink_RxPacket rxPacket = {0};
+#endif
+
+#ifdef RFEASYLINKRX_ASYNC
+    /* Create a semaphore for Async*/
+    Semaphore_Params params;
+    Error_Block eb;
+
+    /* Init params */
+    Semaphore_Params_init(&params);
+    Error_init(&eb);
+
+    char uartTxBuffer[20];
+
+    /* Create semaphore instance */
+    rxDoneSem = Semaphore_create(0, &params, &eb);
+#endif //RFEASYLINKRX_ASYNC
+
+    EasyLink_init(EasyLink_Phy_50kbps2gfsk);
+    EasyLink_setFrequency(868000000);
+    EasyLink_setRfPwr(12);
+
+#ifdef RFEASYLINKRX_ADDR_FILTER
+    uint8_t addrFilter = 0xab;
+    EasyLink_enableRxAddrFilter(&addrFilter, 1, 1);
+#endif //RFEASYLINKRX_ADDR_FILTER
+
+    /* Initialize display and try to open both UART display. */
+    Display_Params dispParams;
+    Display_Params_init(&dispParams);
+    dispParams.lineClearMode = DISPLAY_CLEAR_BOTH;
+
+    /* Open both an available LCD display and an UART display.
+     * Whether the open call is successful depends on what is present in the
+     * Display_config[] array of the board file.
+     *
+     * Note that for SensorTag evaluation boards combined with the SHARP96x96
+     * Watch DevPack, there is a pin conflict with UART such that one must be
+     * excluded, and UART is preferred by default. To display on the Watch
+     * DevPack, add the precompiler define BOARD_DISPLAY_EXCLUDE_UART.
+     */
+    hDisplaySerial = Display_open(Display_Type_UART, &dispParams);
+
+    /* Check if the selected Display type was found and successfully opened */
+    if (hDisplaySerial)
+    {
+        Display_print0(hDisplaySerial, 0, 0, "RX Module...");
+    }
+
+    while(1) {
+#ifdef RFEASYLINKRX_ASYNC
+        EasyLink_receiveAsync(rxDoneCb, 0);
+
+        /* Wait 300ms for Rx */
+//        if(Semaphore_pend(rxDoneSem, (3000000 / Clock_tickPeriod)) == FALSE)
+        if(Semaphore_pend(rxDoneSem, (BIOS_WAIT_FOREVER)) == FALSE)
+        {
+            /* RX timed out abort */
+            if(EasyLink_abort() == EasyLink_Status_Success)
+            {
+               /* Wait for the abort */
+               Semaphore_pend(rxDoneSem, BIOS_WAIT_FOREVER);
+            }
+        }
+#else
+        rxPacket.absTime = 0;
+        EasyLink_Status result = EasyLink_receive(&rxPacket);
+
+        if (result == EasyLink_Status_Success)
+        {
+            /* Toggle LED2 to indicate RX */
+            PIN_setOutputValue(pinHandle, Board_LED2,!PIN_getOutputValue(Board_LED2));
+        }
+        else
+        {
+            /* Toggle LED1 and LED2 to indicate error */
+            PIN_setOutputValue(pinHandle, Board_LED1,!PIN_getOutputValue(Board_LED1));
+            PIN_setOutputValue(pinHandle, Board_LED2,!PIN_getOutputValue(Board_LED2));
+        }
+#endif //RX_ASYNC
+
+        /* print results */
+        Display_print0(hDisplaySerial, 0, 0, "Conversion results:");
+//        uint8_t i;
+		/*for(i = 0; i !=8; i++)
+		{
+			System_sprintf(uartTxBuffer,"%u", result_buf[i]);
+			Display_print0(hDisplaySerial, 0, 0, uartTxBuffer);
+		}*/
+        System_sprintf(uartTxBuffer,"%d",(int16_t)node_indentifier);
+        Display_print0(hDisplaySerial, 0, 0, uartTxBuffer);
+    }
+}
+
 void txTask_init(PIN_Handle inPinHandle) {
     pinHandle = inPinHandle;
 
@@ -308,6 +450,18 @@ void txTask_init(PIN_Handle inPinHandle) {
     txTaskParams.arg0 = (UInt)1000000;
 
     Task_construct(&txTask, rfEasyLinkTxFnx, &txTaskParams, NULL);
+}
+
+void rxTask_init(PIN_Handle ledPinHandle) {
+    pinHandle = ledPinHandle;
+
+    Task_Params_init(&rxTaskParams);
+    rxTaskParams.stackSize = RFEASYLINKEX_TASK_STACK_SIZE;
+    rxTaskParams.priority = RFEASYLINKEX_TASK_PRIORITY;
+    rxTaskParams.stack = &rxTaskStack;
+    rxTaskParams.arg0 = (UInt)1000000;
+
+    Task_construct(&rxTask, rfEasyLinkRxFnx, &rxTaskParams, NULL);
 }
 
 /*
@@ -332,6 +486,13 @@ int main(void)
     Board_initADCBuf();
 
     txTask_init(pinHandle);
+    rxTask_init(pinHandle);
+
+//    EasyLink_init(EasyLink_Phy_50kbps2gfsk);
+//    /* Set Freq to 868MHz */
+//    EasyLink_setFrequency(868000000);
+//    /* Set output power to 12dBm */
+//    EasyLink_setRfPwr(12);
 
     /* Start BIOS */
     BIOS_start();
