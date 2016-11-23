@@ -1,8 +1,9 @@
-1. Communicate from multiple slaves..
+1. Communicate from multiple slaves..                               (DONE)              
 2. Full duplex coomunication
 3. Send a global packet back to nodes
 4. Send a packet addressed locally to individual nodes
-5. Process commands from UART(reference) on concentrator and send it downstream
+5. Process commands from UART(reference) on concentrator 
+   and send it downstream
 6. Connect nodes to piccolo (UART best?)
 7. Push data from concentrator to piccolo
 8. Push data upstream from piccolo
