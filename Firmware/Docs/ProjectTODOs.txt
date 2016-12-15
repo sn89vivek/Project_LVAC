@@ -1,5 +1,5 @@
 1. Communicate from multiple slaves..                               (DONE)              
-2. Full duplex coomunication
+2. Full duplex coomunication                                        (DONE)
 3. Send a global packet back to nodes
 4. Send a packet addressed locally to individual nodes
 5. Process commands from UART(reference) on concentrator 

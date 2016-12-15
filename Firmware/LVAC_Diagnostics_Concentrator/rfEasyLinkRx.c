@@ -305,6 +305,7 @@ void rxTask_init(PIN_Handle ledPinHandle) {
     Task_construct(&rxTask, rfEasyLinkRxFnx, &rxTaskParams, NULL);
 }
 
+// 1s
 void radioTxFn()
 {
 //	PIN_setOutputValue(pinHandle, Board_LED1,!PIN_getOutputValue(Board_LED1));
